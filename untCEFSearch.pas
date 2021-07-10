@@ -20,6 +20,9 @@ function GetNodeText(ANode: ICefDomNode): string;
 function GetChildByNo(ANode: ICefDomNode; AIndex: Integer; IgnoreNodeTypes: TCefDomNodeTypeSet = [DOM_NODE_TYPE_TEXT]): ICefDomNode;
 function GetChildCount(ANode: ICefDomNode; IgnoreNodeTypes: TCefDomNodeTypeSet = [DOM_NODE_TYPE_TEXT]): Integer;
 
+function GetElementById(ADocument: ICefDomDocument; AID, AClass: string): ICefDomNode;
+
+
 implementation
 
 function FindNodeByClass(ANode: ICefDomNode; NodeName, AClassName: string): ICefDomNode;
@@ -185,6 +188,13 @@ begin
     end;
     child := child.NextSibling;
   end;
+end;
+
+function GetElementById(ADocument: ICefDomDocument; AID, AClass: string): ICefDomNode;
+begin
+  Result := ADocument.GetElementById(AID);
+  if Result = nil then
+    Result := FindNodeByAttrEx(ADocument.Body, AClass, 'id', AID);
 end;
 
 end.

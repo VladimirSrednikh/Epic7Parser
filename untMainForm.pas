@@ -483,55 +483,59 @@ var
   ListNode, RoleNode, SetsNode, SetNode: ICefDomNode;
   ref, CatalystName: string;
   i: Integer;
+  CatalystList: TStringList;
 begin
   // Catalysts for skills
-  SkillsNode := document.GetElementById('Skills'); LogNode('Skills', SkillsNode);
-  ParamTable := FindNodeByClass(SkillsNode, 'div', 'pure-g mt-50 mmt-0');  //LogNode('pure-g mt-50 mmt-0', ParamTable);
-  ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-u-1 text-center mt-30 pb-50');  //LogNode('pure-u-1 text-center mt-30 pb-50', ParamTable);
-  ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-g');   LogNode('pure-g', ParamTable);
-//          EnumSubNodes(ParamTable);
-  for I := 1 to GetChildCount(ParamTable) do
-  begin
-    ParamRow := GetChildByNo(ParamTable, I);
-//            CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, Format('=========== Skills ParamRow[%d] %d - %s', [i, Ord(ParamRow.NodeType), ParamRow.AsMarkup]));
-    Cell := FindNodeByAttrEx(ParamRow, 'a', '', '');
-    if Cell <> nil then
-    begin
-      ref := Cell.GetElementAttribute('href');
-      CatalystName := GetLinkNameFromUrl(ref);
-      CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, Format('=========== Skills ParamRow[%d] href %s, name %s', [i, ref, CatalystName]));
-      if not SameText(CatalystName, 'gold') or not SameText(CatalystName, 'molagora') or not SameText(CatalystName, 'molagorago') then
-        if AHero.O['Catalysts'].S[CatalystName] = '' then
-        begin
-          AHero.O['Catalysts'].S[CatalystName] := '+';
-        end;
-//              obj.O[heroName].A['Catalysts'].
-    end;
-  end;
+  AHero.O['Catalysts'] := SA([]);
+  CatalystList := TStringList.Create(TDuplicates.dupIgnore, True, False);
+  try
+    SkillsNode := GetElementById(document, 'Skills', 'section'); LogNode('Skills', SkillsNode);
 
-  // Catalysts for awakening
-  AwekeningNode := document.GetElementById('Awakening'); LogNode('Awakening', AwekeningNode);
-  ParamTable := FindNodeByClass(AwekeningNode, 'div', 'pure-u-1 text-center mt-20');  LogNode('pure-u-1 text-center mt-20', ParamTable);
-  ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-g');  LogNode('pure-g', ParamTable);
-//          EnumSubNodes(ParamTable);
-  for I := 1 to GetChildCount(ParamTable) do
-  begin
-    ParamRow := GetChildByNo(ParamTable, I);
-//            CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== awakening ParamRow[]' + inttoStr(i) + ' ' + ParamRow.AsMarkup);
-    Cell := FindNodeByAttrEx(ParamRow, 'a', '', '');
-    if Cell <> nil then
-    begin
-      ref := Cell.GetElementAttribute('href');
-      CatalystName := GetLinkNameFromUrl(ref);
-      CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, Format('=========== awakening ParamRow[%d] href %s, name %s', [i, ref, CatalystName]));
-      if not ContainsText(CatalystName, ' rune') then
-        if AHero.O['Catalysts'].S[CatalystName] = '' then
-        begin
-          AHero.O['Catalysts'].S[CatalystName] := '+';
-        end;
-    end;
-  end;
+    ParamTable := FindNodeByClass(SkillsNode, 'div', 'pure-g mt-50 mmt-0');  //LogNode('pure-g mt-50 mmt-0', ParamTable);
+    ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-u-1 text-center mt-30 pb-50');  //LogNode('pure-u-1 text-center mt-30 pb-50', ParamTable);
+    ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-g');   LogNode('pure-g', ParamTable);
+  //          EnumSubNodes(ParamTable);
 
+  CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, Format('=========== Skill_s resources cnt %d', [GetChildCount(ParamTable)]));
+    for I := 1 to GetChildCount(ParamTable) do
+    begin
+      ParamRow := GetChildByNo(ParamTable, I);
+  //CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, Format('=========== Skills ParamRow[%d] %d - %s', [i, Ord(ParamRow.NodeType), ParamRow.AsMarkup]));
+      Cell := FindNodeByAttrEx(ParamRow, 'a', '', '');
+      if Cell <> nil then
+      begin
+        ref := Cell.GetElementAttribute('href');
+        CatalystName := GetLinkNameFromUrl(ref);
+        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, Format('=========== Skills ParamRow[%d] href %s, name %s', [i, ref, CatalystName]));
+        if not SameText(CatalystName, 'gold') or not SameText(CatalystName, 'molagora') or not SameText(CatalystName, 'molagorago') then
+          CatalystList.Add(CatalystName);
+      end;
+    end;
+
+    // Catalysts for awakening
+    AwekeningNode := document.GetElementById('Awakening'); LogNode('Awakening', AwekeningNode);
+    ParamTable := FindNodeByClass(AwekeningNode, 'div', 'pure-u-1 text-center mt-20');  LogNode('pure-u-1 text-center mt-20', ParamTable);
+    ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-g');  LogNode('pure-g', ParamTable);
+  //          EnumSubNodes(ParamTable);
+    for I := 1 to GetChildCount(ParamTable) do
+    begin
+      ParamRow := GetChildByNo(ParamTable, I);
+  //            CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== awakening ParamRow[]' + inttoStr(i) + ' ' + ParamRow.AsMarkup);
+      Cell := FindNodeByAttrEx(ParamRow, 'a', '', '');
+      if Cell <> nil then
+      begin
+        ref := Cell.GetElementAttribute('href');
+        CatalystName := GetLinkNameFromUrl(ref);
+        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, Format('=========== awakening ParamRow[%d] href %s, name %s', [i, ref, CatalystName]));
+        if not ContainsText(CatalystName, ' rune') then
+          CatalystList.Add(CatalystName);
+      end;
+    end;
+    for I := 0 to CatalystList.Count - 1 do
+      AHero.A['Catalysts'].Add(CatalystList[I]);
+  finally
+    CatalystList.Free;
+  end;
 end;
 
 procedure ParseHeroInfoBaseStats(document: ICefDomDocument; AHero: ISuperObject);
@@ -938,6 +942,11 @@ begin
 //          NavigateAndWait(Obj.AsArray[i].S['Url']);
           {$MESSAGE WARN 'отладка для набора сетов и артифактов'}
           NavigateAndWait('https://epic7x.com/character/ainos/');
+          SendMessage(CEFWindowParent1.Handle, WM_KEYDOWN, VK_END, 0);
+          Application.ProcessMessages;
+          SendMessage(CEFWindowParent1.Handle, WM_KEYUP, VK_END, $C000);
+          Application.ProcessMessages;
+
           FWorkDone.ResetEvent;
           Chromium1.SendProcessMessage(PID_RENDERER, TCefProcessMessageRef.New(DOMVISITOR_PARSE_HEROSET));
           while FWorkDone.WaitFor(100) <> wrSignaled do

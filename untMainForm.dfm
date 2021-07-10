@@ -25,7 +25,6 @@ object frmEpic7xParser: TfrmEpic7xParser
     Height = 854
     Align = alClient
     TabOrder = 1
-    ExplicitTop = 40
   end
   object AddressBarPnl: TPanel
     Left = 0
@@ -50,8 +49,7 @@ object frmEpic7xParser: TfrmEpic7xParser
       Align = alClient
       TabOrder = 0
       Text = 'https://epic7x.com/tier-list/'
-      ExplicitWidth = 692
-      ExplicitHeight = 20
+      ExplicitHeight = 21
     end
     object Panel1: TPanel
       AlignWithMargins = True
@@ -63,9 +61,6 @@ object frmEpic7xParser: TfrmEpic7xParser
       BevelOuter = bvNone
       Padding.Left = 5
       TabOrder = 1
-      ExplicitLeft = 688
-      ExplicitTop = 5
-      ExplicitHeight = 20
       object Splitter1: TSplitter
         Left = 5
         Top = 0
@@ -84,8 +79,6 @@ object frmEpic7xParser: TfrmEpic7xParser
         Caption = 'Go'
         TabOrder = 0
         OnClick = GoBtnClick
-        ExplicitLeft = 6
-        ExplicitHeight = 20
       end
       object btnParseHeroInfo: TButton
         Left = 119
