@@ -47,13 +47,13 @@ type
     Timer1: TTimer;
     Panel1: TPanel;
     GoBtn: TButton;
-    btnParseHeroStats: TButton;
+    btnParseHeroInfo: TButton;
     ProgressBar1: TProgressBar;
     Splitter1: TSplitter;
     btnParseHeroList: TButton;
     procedure Timer1Timer(Sender: TObject);
     procedure GoBtnClick(Sender: TObject);
-    procedure btnParseHeroStatsClick(Sender: TObject);
+    procedure btnParseHeroInfoClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -323,11 +323,11 @@ var
   tmpstr: string;
 begin
   if ANode = nil then
-    CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats ' + ANodeName + ' ' + 'nil')
+    CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo ' + ANodeName + ' ' + 'nil')
   else
   begin
     tmpstr := ANode.AsMarkup;
-    CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats ' + ANodeName + ' - Ok'{. AsMarkup = ' + tmpstr});
+    CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo ' + ANodeName + ' - Ok'{. AsMarkup = ' + tmpstr});
   end;
 end;
 function GetPictureNameFromUrl(AUrl: string): string;
@@ -355,12 +355,11 @@ end;
 
 procedure ParseHeroBaseInfo(document: ICefDomDocument; AHero: ISuperObject);
 var
-  AppNode, NameNode, ParamTable, ParamRow, Cell: ICefDomNode;
+  AppNode, ParamTable, ParamRow, Cell: ICefDomNode;
   ref: string;
 begin
-  AppNode := document.GetElementById('app'); LogNode('app', AppNode);
-  NameNode := FindNodeByClass(AppNode, 'h1', 'pt-30'); LogNode('pt-30 NameNode: ' + GetNodeText(NameNode), NameNode);
-  ParamTable := FindNodeByClass(AppNode, 'div', 'pure-g'); LogNode('pure-g', ParamTable);
+  AppNode := document.GetElementById('app'); //LogNode('app', AppNode);
+  ParamTable := FindNodeByClass(AppNode, 'div', 'pure-g'); //LogNode('pure-g', ParamTable);
   ParamTable := GetChildByNo(ParamTable, 1);
   ParamRow := GetChildByNo(ParamTable, 4);
 //          EnumSubNodes(ParamRow);
@@ -369,55 +368,115 @@ begin
     Cell := GetChildByNo(ParamRow, 3);
     Cell := FindNodeByAttrEx(Cell, 'img', '', '');
     ref := Cell.GetElementAttribute('data-src');
-//            CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Zodiac ref ' + ref);
+//            CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo Zodiac ref ' + ref);
     AHero.S['Zodiac'] := GetPictureNameFromUrl(ref);
-    CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Zodiac: ' + AHero.S['Zodiac']);
+//    CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo Zodiac: ' + AHero.S['Zodiac']);
   end;
 end;
 
-procedure ParseHeroStatsTierList(document: ICefDomDocument; AHero: ISuperObject);
-// RECOMMENDED ARTIFACTS
+procedure ParseHeroInfoTierList(document: ICefDomDocument; AHero: ISuperObject);
+//RECOMMENDED ARTIFACTS
 //RECOMMENDED SETS
+//SUBSTAT PRIORITY
+const
+  AddStats: array [1..3] of string = ('necklace', 'ring', 'boot');
 var
-  TierList, ParamTable, ParamRow, Cell,
-  ListNode, RoleNode, SetsNode, SetNode: ICefDomNode;
-  I, iset: Integer;
-  setName: string;
+  TierList,ListNode, ArtifactNode, SubstatNode, Cell, SetNode: ICefDomNode;
+  buildNode, buildNameNode, buildKindNode, buildStatNode: ICefDomNode;
+  I, iset, istat, statCnt: Integer;
+  Substats: string;
+  Res: TList<ICefDomNode>;
+  build: ISuperObject;
 begin
 //  section id="TierList"
 //      <div class="pure-g ">
   TierList := document.GetElementById('TierList');
-  ListNode := FindNodeByClass(TierList, 'div', 'pure-g ');
+  ListNode := GetChildByNo(TierList, 8);
+//  CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== Parse Recomended Artefacts, AsMarkup = ' + ListNode.AsMarkup);
+  AHero.O['artefacts'] := SA([]);
+
+  if (ListNode <> nil) then
+    for I := 1 to GetChildCount(ListNode) do
+    begin
+//  CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, 'Artefact, row #' + IntToStr(I) + ' from ' + GetChildCount(ListNode).ToString);
+      Cell := GetChildByNo(ListNode, I);
+      ArtifactNode := FindNodeByClass(Cell, 'div', 'f-12');
+//  CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== Artefact: ' + GetNodeText(ArtifactNode));
+      AHero.A['artefacts'].Add(GetNodeText(ArtifactNode));
+    end;
+
+  // Sets
+  AHero.O['Builds'] := SA([]);
+  ListNode := GetChildByNo(TierList, 12);
   if (ListNode <> nil) then
   for I := 1 to GetChildCount(ListNode) do
   begin
-    RoleNode := GetChildByNo(ListNode, I);
-    if RoleNode <> nil then
+    buildNode := GetChildByNo(ListNode, I);
+
+    buildNameNode := GetChildByNo(buildNode, 1);
+    buildKindNode := GetChildByNo(buildNode, 2);
+    buildStatNode := GetChildByNo(buildNode, 3);
+    build := SO();
+    AHero.A['Builds'].Add(build);
+    build.S['name'] := GetNodeText(FindNodeByClass(buildNameNode, 'b', ''));
+    build.O['sets'] := SA([]);
+
+    for iset := 1 to GetChildCount(buildKindNode) do
     begin
-      SetsNode := GetChildByNo(RoleNode, 2);
-      if SetsNode <> nil then
-        for iset := 1 to GetChildCount(SetsNode) do
-        begin
-          SetNode := FindNodeByClass(GetChildByNo(SetsNode, iset), 'span', 'f-16');
-          if SetNode <>nil then
-          begin
-            setName := GetNodeText(SetNode);
-//        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Detect set: ' + setName);
-            if AHero.O['sets'].O[setName] = nil then
-              AHero.O['sets'].B[setName] := True;
-          end;
-        end;
+      SetNode := FindNodeByClass(GetChildByNo(buildKindNode, iset), 'span', 'f-16');
+      if SetNode <> nil then
+        build.A['sets'].Add(GetNodeText(SetNode));
+    end;
+
+    statCnt := 0;
+    for istat := 1 to GetChildCount(buildStatNode) do
+    begin
+      if statCnt > 3 then
+        Break;
+      Cell := GetChildByNo(buildStatNode, istat);
+      if Cell.GetElementAttribute('class') = 'f-14' then
+      begin
+        statCnt := statCnt + 1;
+//  CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo stat text : ' + GetNodeText(Cell));
+//  CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo stat : ' + Cell.AsMarkup);
+        build.S[AddStats[statCnt]] := Trim(StringReplace(GetNodeText(Cell), #$A0, '', [rfReplaceAll]));
+      end;
     end;
   end;
+//SUBSTAT PRIORITY
+  AHero.O['Substats'] := SA([]);
+
+  SubstatNode := document.GetElementById('SubstatPriority');
+//  LogNode('SubstatPriority by ID', SubstatNode);
+  if SubstatNode = nil then
+  begin
+//  <section class="pure-u-1 " id="SubstatPriority">
+    SubstatNode := FindNodeByAttrEx(document.Body, 'section', 'id', 'SubstatPriority');
+//    LogNode('SubstatPriority by atribs', SubstatNode);
+  end;
+
+  if SubstatNode <> nil then
+    ListNode := FindNodeByClass(SubstatNode, 'div', 'mp-20');
+  LogNode('div mp-20', ListNode);
+  if ListNode <> nil then
+    begin
+      Res := nil;
+      try
+        FillNodeArrByAttrEx(ListNode, 'b', '', '', Res);
+//  CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo Found substats Count: ' + IntToStr(Res.Count));
+        for SetNode in Res do
+        begin
+//        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo Found substat: ' + GetNodeText(SetNode));
+          Substats := GetNodeText(SetNode);
+          AHero.A['Substats'].Add(Substats);
+        end;
+      finally
+        Res.Free;
+      end;
+    end;
 end;
 
-procedure ParseHeroStatsSubstats(document: ICefDomDocument; AHero: ISuperObject);
-begin
-
-
-end;
-
-procedure ParseHeroStatsCatalysts(document: ICefDomDocument; AHero: ISuperObject);
+procedure ParseHeroInfoCatalysts(document: ICefDomDocument; AHero: ISuperObject);
 var
   SkillsNode, AwekeningNode,
   ParamTable, ParamRow, Cell,
@@ -427,8 +486,8 @@ var
 begin
   // Catalysts for skills
   SkillsNode := document.GetElementById('Skills'); LogNode('Skills', SkillsNode);
-  ParamTable := FindNodeByClass(SkillsNode, 'div', 'pure-g mt-50 mmt-0');  LogNode('pure-g mt-50 mmt-0', ParamTable);
-  ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-u-1 text-center mt-30 pb-50');  LogNode('pure-u-1 text-center mt-30 pb-50', ParamTable);
+  ParamTable := FindNodeByClass(SkillsNode, 'div', 'pure-g mt-50 mmt-0');  //LogNode('pure-g mt-50 mmt-0', ParamTable);
+  ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-u-1 text-center mt-30 pb-50');  //LogNode('pure-u-1 text-center mt-30 pb-50', ParamTable);
   ParamTable := FindNodeByClass(ParamTable, 'div', 'pure-g');   LogNode('pure-g', ParamTable);
 //          EnumSubNodes(ParamTable);
   for I := 1 to GetChildCount(ParamTable) do
@@ -475,19 +534,19 @@ begin
 
 end;
 
-procedure ParseHeroStatsBaseStats(document: ICefDomDocument; AHero: ISuperObject);
+procedure ParseHeroInfoBaseStats(document: ICefDomDocument; AHero: ISuperObject);
 begin
 
 
 end;
 
-procedure ParseHeroStatsBaseTeamCalc(document: ICefDomDocument; AHero: ISuperObject);
+procedure ParseHeroInfoBaseTeamCalc(document: ICefDomDocument; AHero: ISuperObject);
 begin
 
 
 end;
 
-procedure ParseHeroStats(const browser: ICefBrowser; const frame: ICefFrame; const document: ICefDomDocument);
+procedure ParseHeroInfo(const browser: ICefBrowser; const frame: ICefFrame; const document: ICefDomDocument);
   function GetHeroIndName(AHeroArr: ISuperObject; AHeroName: string): Integer;
   var
     i: Integer;
@@ -505,26 +564,25 @@ var
   ref, CatalystName,
   heroName, setName, Substats: string;
   HeroesFile: ISuperObject;
-  heroInd, I, iset: Integer;
+  heroInd, I: Integer;
   st: Cardinal;
-  Res: TList<ICefDomNode>;
 begin
   try
     if (document <> nil) then
     begin
       st := GetTickCount;
-      CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats START : ');// + IntToStr(st));
+      CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo START : ');// + IntToStr(st));
       HeroesFile := TSuperObject.ParseFile(ChangeFileExt(ParamStr(0), '.json'), True);
       try
       // 1) Определить имя героя
         AppNode := document.GetElementById('app'); LogNode('app', AppNode);
         NameNode := FindNodeByClass(AppNode, 'h1', 'pt-30'); LogNode('pt-30 NameNode: ' + GetNodeText(NameNode), NameNode);
         heroName := GetNodeText(NameNode);
-//        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Detect hero: ' + heroName);
+//        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo Detect hero: ' + heroName);
         heroInd := GetHeroIndName(HeroesFile, heroName);
         if heroInd = -1 then
         begin
-          CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Hero not found');
+          CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo Hero not found');
           Exit;
         end;
 
@@ -532,42 +590,15 @@ begin
         CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, 'Title: ' + document.BaseUrl + ' ' + document.Title);
         CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, 'Body: ' + InttoHex(Integer(TObject(document.body)), 8));
 //        if document.body <> nil then
-//        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats RootNode ' + document.body.AsMarkup);
+//        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo RootNode ' + document.body.AsMarkup);
         ParseHeroBaseInfo(document, HeroesFile.AsArray[heroInd]);
-        ParseHeroStatsTierList(document, HeroesFile.AsArray[heroInd]);
-        ParseHeroStatsSubstats(document, HeroesFile.AsArray[heroInd]);
-        ParseHeroStatsCatalysts(document, HeroesFile.AsArray[heroInd]);
-        ParseHeroStatsBaseStats(document, HeroesFile.AsArray[heroInd]);
-        ParseHeroStatsBaseTeamCalc(document, HeroesFile.AsArray[heroInd]);
-
-
-        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Sets: ' + HeroesFile.AsArray[heroInd].O['sets'].AsString);
-        ListNode := document.GetElementById('SubstatPriority');
-        if ListNode <> nil then
-          ListNode := FindNodeByClass(ListNode, 'div', 'mp-20');
-        if ListNode <> nil then
-          begin
-            Res := nil;
-            try
-              FillNodeArrByAttrEx(ListNode, 'b', '', '', Res);
-        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Found substats Count: ' + IntToStr(Res.Count));
-              Substats := '';
-              for SetNode in Res do
-              begin
-//        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Found substat: ' + GetNodeText(SetNode));
-                if Substats = '' then
-                  Substats := GetNodeText(SetNode)
-                else
-                  Substats := Substats + ', ' + GetNodeText(SetNode);
-              end;
-              HeroesFile.AsArray[heroInd].S['Substats'] := Substats;
-            finally
-              Res.Free;
-            end;
-          end;
-        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats Substats: ' + HeroesFile.AsArray[heroInd].S['Substats']);
+        ParseHeroInfoTierList(document, HeroesFile.AsArray[heroInd]);
+        ParseHeroInfoCatalysts(document, HeroesFile.AsArray[heroInd]);
+        ParseHeroInfoBaseStats(document, HeroesFile.AsArray[heroInd]);
+        ParseHeroInfoBaseTeamCalc(document, HeroesFile.AsArray[heroInd]);
+        HeroesFile.SaveTo(ChangeFileExt(ParamStr(0), '.json'));
       finally
-        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroStats END   : ' + IntToStr(GetTickCount - st));
+        CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== ParseHeroInfo END   : ' + IntToStr(GetTickCount - st));
         SignalWorkIsDone;
         HeroesFile.SaveTo(ChangeFileExt(ParamStr(0), '.json'), True, True);
       end;
@@ -621,7 +652,7 @@ begin
         begin
           if (frame <> nil) and frame.IsValid then
             begin
-              TempVisitor := TCefFastDomVisitor2.Create(browser, frame, ParseHeroStats);
+              TempVisitor := TCefFastDomVisitor2.Create(browser, frame, ParseHeroInfo);
               frame.VisitDom(TempVisitor);
             end;
           aHandled := True;
@@ -751,7 +782,7 @@ begin
   if Assigned(browser) and Assigned(browser.MainFrame)  then
   begin
     btnParseHeroList.Enabled := True;
-    btnParseHeroStats.Enabled := True;
+    btnParseHeroInfo.Enabled := True;
     Caption := browser.MainFrame.Url;
     FMainFrameLoading := True;
   end;
@@ -830,7 +861,7 @@ begin
 end;
 procedure TfrmEpic7xParser.GoBtnClick(Sender: TObject);
 begin
-  btnParseHeroStats.Enabled := False;
+  btnParseHeroInfo.Enabled := False;
   btnParseHeroList.Enabled := False;
   Chromium1.LoadURL(AddressEdt.Text);
 end;
@@ -881,7 +912,7 @@ begin
   end;
 end;
 
-procedure TfrmEpic7xParser.btnParseHeroStatsClick(Sender: TObject);
+procedure TfrmEpic7xParser.btnParseHeroInfoClick(Sender: TObject);
 var
   Obj: ISuperObject;
   i: Integer;
@@ -904,13 +935,9 @@ begin
         if Obj.AsArray[i].S['Url'] <> '' then
         begin
     //  CefLog('CEF4Delphi.log', 1, CEF_LOG_SEVERITY_ERROR, '=========== NavigateURL: ' + HeroEnum.Current.S['Url']);
-          with TStringList.Create do
-          begin
-            TrailingLineBreak := False;
-            Text := Obj.AsArray[i].S['name'];
-            SaveToFile(C_Epic7_Hero);
-          end;
-          NavigateAndWait(Obj.AsArray[i].S['Url']);
+//          NavigateAndWait(Obj.AsArray[i].S['Url']);
+          {$MESSAGE WARN 'отладка для набора сетов и артифактов'}
+          NavigateAndWait('https://epic7x.com/character/ainos/');
           FWorkDone.ResetEvent;
           Chromium1.SendProcessMessage(PID_RENDERER, TCefProcessMessageRef.New(DOMVISITOR_PARSE_HEROSET));
           while FWorkDone.WaitFor(100) <> wrSignaled do

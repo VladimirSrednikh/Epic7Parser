@@ -87,7 +87,7 @@ object frmEpic7xParser: TfrmEpic7xParser
         ExplicitLeft = 6
         ExplicitHeight = 20
       end
-      object btnParseHeroStats: TButton
+      object btnParseHeroInfo: TButton
         Left = 119
         Top = 0
         Width = 90
@@ -95,7 +95,7 @@ object frmEpic7xParser: TfrmEpic7xParser
         Align = alLeft
         Caption = 'Parse HeroStats'
         TabOrder = 2
-        OnClick = btnParseHeroStatsClick
+        OnClick = btnParseHeroInfoClick
       end
       object btnParseHeroList: TButton
         Left = 39
